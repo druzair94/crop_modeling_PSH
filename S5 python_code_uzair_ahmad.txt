@@ -1,0 +1,59 @@
+# run libs
+import xarray as xr #Py lib that works with multi-dimensional arrays like NetCDF
+import pandas as pd #Py lib that provides data structures for analysis
+
+# get data
+file_pattern='C:/tasmax/*.nc'
+dataset=xr.open_mfdataset(file_pattern)
+
+file_pattern2='C:/tasmin/*.nc'
+dataset2=xr.open_mfdataset(file_pattern2)
+
+file_pattern3='C:/rsds/*.nc'
+dataset3=xr.open_mfdataset(file_pattern3)
+
+file_pattern4='C:/pr/*.nc'
+dataset4=xr.open_mfdataset(file_pattern4)
+
+# check
+dataset.time
+
+# coordinates
+latitude=34.01
+longitude=71.46
+start_date='2025-01-01'
+end_date='2100-12-31'
+
+# dataset known
+dataset.variables.keys()
+dataset2.variables.keys()
+dataset3.variables.keys()
+dataset4.variables.keys()
+
+# parameters needed
+tasmax=dataset.variables['tasmax'][:]
+tasmin=dataset2.variables['tasmin'][:]
+rsds=dataset3.variables['rsds'][:]
+pr=dataset4.variables['pr'][:]
+
+# extraction now
+dataset_interp=dataset.interp(lat=latitude,lon=longitude,method='nearest')
+subset=dataset_interp['tasmax'].sel(time=slice(start_date,end_date))-272.15
+
+dataset_interp2=dataset2.interp(lat=latitude,lon=longitude,method='nearest')
+subset2=dataset_interp2['tasmin'].sel(time=slice(start_date,end_date))-272.15
+
+dataset_interp3=dataset3.interp(lat=latitude,lon=longitude,method='nearest')
+subset3=dataset_interp3['rsds'].sel(time=slice(start_date,end_date))*86400/1000000
+
+dataset_interp4=dataset4.interp(lat=latitude,lon=longitude,method='nearest')
+subset4=dataset_interp4['pr'].sel(time=slice(start_date,end_date))* 86400
+
+# merge extracted data now
+merged_data=xr.merge([subset, subset2, subset3, subset4])
+
+# change to dataframe and then csv, optional for csv
+#df = pd.DataFrame({'time':time,'tmax': tmax, 'tmin': tmin, 'precip': precip})
+df=merged_data.to_dataframe().reset_index()
+df1=df.to_csv('C:/climate_data/all_climate_dataset.csv',index=False)
+
